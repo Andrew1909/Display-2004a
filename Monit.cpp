@@ -4,6 +4,10 @@
 // #include <string.h>
 // #include <inttypes.h>
  #include <Arduino.h>
+ #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
 
 
 
@@ -206,9 +210,9 @@ void send(int value, int mode) {
   digitalWrite(_rs_pin, mode);
 
   // if there is a RW pin indicated, set it low to Write
-  //if (_rw_pin != 255) { 
+  if (_rw_pin != 255) { 
     digitalWrite(_rw_pin, HIGH);
-  //}
+  }
     write4bits(value>>4);
     write4bits(value);
   
@@ -230,7 +234,6 @@ void write4bits(int value) {
   pulseEnable();
 }
 
-
 size_t write2(const char *buffer, size_t size) {
       return write((const int *)buffer, size);
     }
@@ -250,17 +253,67 @@ int write(int *buffer, int size)
   Mywrite(n);
 }
 
-
-
-int MyPrintSimvol(char c)
+int MyPrintChar(char c)
 {
   char *p=&c;
-   write1(p);//если поменять неченго не выводит
+   write1(p);
 }
 
 
+size_t MyPrintInt(int n, int base)
+{
+  return print2((long) n, base);
+}
+
+size_t print2(long n, int base)
+{
+  if (base == 0) {
+    return write1(n);
+  } else if (base == 10) {
+    if (n < 0) {
+      int t = print3('-');
+      n = -n;
+      return printNumber(n, 10) + t;
+    }
+    return printNumber(n, 10);
+  } else {
+    return printNumber(n, base);
+  }
+}
+
+size_t printNumber(unsigned long n, uint8_t base)
+{
+  char buf[8 * sizeof(long) + 1]; // Assumes 8-bit chars plus zero byte.
+  char *str = &buf[sizeof(buf) - 1];
+
+  *str = '\0';
+
+  // prevent crash if called with base == 1
+  if (base < 2) base = 10;
+
+  do {
+    char c = n % base;
+    n /= base;
+
+    *--str = c < 10 ? c + '0' : c + 'A' - 10;
+  } while(n);
+
+  return write1(str);
+}
 
 
+size_t print3(const __FlashStringHelper *ifsh)
+{
+  PGM_P p = reinterpret_cast<PGM_P>(ifsh);
+  size_t n = 0;
+  while (1) {
+    unsigned char c = pgm_read_byte(p++);
+    if (c == 0) break;
+    if (write1(c)) n++;
+    else break;
+  }
+  return n;
+}
 
 
 
