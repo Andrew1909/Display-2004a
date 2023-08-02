@@ -1,54 +1,25 @@
 #include "Monit.h"
-
-// #include <stdio.h>
-// #include <string.h>
-// #include <inttypes.h>
- #include <Arduino.h>
- #include <stdlib.h>
+#include <Arduino.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 
-
-
 void send(int, int);
-  void write4bits(int);
+void write4bits(int);
  
-  void pulseEnable();
+void pulseEnable();
 
-  int _rs_pin; // LOW: command.  HIGH: character.
-  int _rw_pin; // LOW: write to LCD.  HIGH: read from LCD.
-  int _enable_pin; // activated by a HIGH pulse.
-  int _data_pins[4];
-
-  int _displayfunction;
-  int _displaycontrol;
-  int _displaymode;
-
-  int _initialized;
-
-  int _numlines;
-  int _row_offsets[4];
-
-// When the display powers up, it is configured as follows:
-//
-// 1. Display clear
-// 2. Function set: 
-//    DL = 1; 8-bit interface data 
-//    N = 0; 1-line display 
-//    F = 0; 5x8 dot character font 
-// 3. Display on/off control: 
-//    D = 0; Display off 
-//    C = 0; Cursor off 
-//    B = 0; Blinking off 
-// 4. Entry mode set: 
-//    I/D = 1; Increment by 1 
-//    S = 0; No shift 
-//
-// Note, however, that resetting the Arduino doesn't reset the LCD, so we
-// can't assume that its in that state when a sketch starts (and the
-// LiquidCrystal constructor is called).
-
+int _rs_pin; // LOW: command.  HIGH: character.
+int _rw_pin; // LOW: write to LCD.  HIGH: read from LCD.
+int _enable_pin; // activated by a HIGH pulse.
+int _data_pins[4];
+int _displayfunction;
+int _displaycontrol;
+int _displaymode;
+int _initialized;
+int _numlines;
+int _row_offsets[4];
 
 void MyCrystal(int rs, int enable,int d4, int d5, int d6, int d7)
 {
@@ -67,7 +38,7 @@ void MyInit(int fourbitmode, int rs, int rw, int enable, int d4, int d5, int d6,
   _data_pins[2] = d6;
   _data_pins[3] = d7; 
   
-    _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
+  _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
   begin(20, 4, _displayfunction);  
 }
 
@@ -78,8 +49,6 @@ void begin(int cols, int lines, int dotsize) {
   _numlines = lines;
 
   setRowOffsets(0x00, 0x40, 0x00 + cols, 0x40 + cols);  
-
- 
 
   pinMode(_rs_pin, OUTPUT);
   // we can save 1 pin by not using RW. Indicate by passing 255 instead of pin#
