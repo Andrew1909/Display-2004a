@@ -1,7 +1,8 @@
 #ifndef Monit_h
 #define Monit_h
-
+#include <string.h>
  #include <inttypes.h>
+ #include <stdio.h> // for size_t
 // #include <Print.h>
 
 // commands
@@ -35,42 +36,37 @@
 #define LCD_MOVELEFT 0x00
 
 // flags for function set
-#define LCD_8BITMODE 0x10
+
 #define LCD_4BITMODE 0x00
 #define LCD_2LINE 0x08
 #define LCD_1LINE 0x00
 #define LCD_5x10DOTS 0x04
 #define LCD_5x8DOTS 0x00
 
-  void MyCrystal(int rs, int enable, int d0, int d1, int d2, int d3, int d4, int d5, int d6, int d7);
+   void MyCrystal(int rs, int enable, int d4, int d5, int d6, int d7);
 
 
-  void init1(int fourbitmode, int rs, int rw, int enable, int d0, int d1, int d2, int d3, int d4, int d5, int d6, int d7);
+  void MyInit(int fourbitmode, int rs, int rw, int enable, int d4, int d5, int d6, int d7);
     
   void begin(int cols, int rows, int charsize);
 
   void clear();
   void home();
-
-  void noDisplay();
   void display();
-  void noBlink();
-  void blink();
-  void noCursor();
-  void cursor();
-  void scrollDisplayLeft();
-  void scrollDisplayRight();
-  void leftToRight();
-  void rightToLeft();
-  void autoscroll();
-  void noAutoscroll();
+int write( int *buffer, int size);
+
+int write1(const char *str);
+
+   size_t write2(const char *buffer, size_t size);
+
+
+  int MyPrintSimvol(char);
 
   void setRowOffsets(int row1, int row2, int row3, int row4);
   void createChar(int, int[]);
   void setCursor(int, int); 
-  int write1(int);
+  int Mywrite(int);
   void command(int);
   
-  //using Print::write;
 
 #endif
