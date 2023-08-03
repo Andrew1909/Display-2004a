@@ -76,6 +76,9 @@ size_t write(uint8_t);
 size_t write5(const uint8_t *buffer, size_t size);
 size_t write4(const char *str);
 
-//size_t print3(const __FlashStringHelper *ifsh);
+//double
+
+size_t MyPrintDouble(double n);
+size_t printFloat(double number, uint8_t digits);
 
 #endif

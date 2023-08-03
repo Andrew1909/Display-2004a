@@ -101,7 +101,7 @@ void begin(int cols, int lines, int dotsize) {
 
   // clear it off
   clear();
-
+  leftToRight();
   // // Initialize to default text direction (for romance languages)
   // _displaymode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
   // set the entry mode
@@ -195,41 +195,6 @@ void rightToLeft(void) {
   command(LCD_ENTRYMODESET | _displaymode);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-char m;
-int b;
-int t;
-
-int as(){
-  return b;
-}
-
-
 size_t MyPrintInt(int n)
 {
   return print2((long) n, DEC);
@@ -290,3 +255,60 @@ size_t write5(const uint8_t *buffer, size_t size)
 
 
 
+char m;
+int b;
+int t;
+
+int as(){
+  return b;
+}
+
+size_t MyPrintDouble(double n)
+{
+  return printFloat(n, 3);//3 это колиество знаков после запятой
+}
+
+size_t printFloat(double number, uint8_t digits)
+{ 
+  size_t n = 0;
+  
+  if (isnan(number)) return write4("nan");
+  if (isinf(number)) return write4("inf");
+  if (number > 4294967040.0) return write4 ("ovf");  // constant determined empirically
+  if (number <-4294967040.0) return write4 ("ovf");  // constant determined empirically
+  
+  // Handle negative numbers
+  if (number < 0.0)
+  {
+     n += Mywrite('-');
+     number = -number;
+  }
+
+  // Round correctly so that print(1.999, 2) prints as "2.00"
+  double rounding = 0.5;
+  for (uint8_t i=0; i<digits; ++i)
+    rounding /= 10.0;
+  
+  number += rounding;
+
+  // Extract the integer part of the number and print it
+  unsigned long int_part = (unsigned long)number;
+  double remainder = number - (double)int_part;
+  n += print2(int_part,10);
+
+  // Print the decimal point, but only if there are digits beyond
+  if (digits > 0) {
+    n += Mywrite('.'); 
+  }
+
+  // Extract digits from the remainder one at a time
+  while (digits-- > 0)
+  {
+    remainder *= 10.0;
+    unsigned int toPrint = (unsigned int)(remainder);
+    n += print2(toPrint,10);
+    remainder -= toPrint; 
+  } 
+  
+  return n;
+}
