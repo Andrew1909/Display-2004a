@@ -1,7 +1,6 @@
 #include "Monit.h"
 #include <Arduino.h>
-#include <stdlib.h>
-#include <stdio.h>
+
 #include <string.h>
 #include <math.h>
 
@@ -23,6 +22,7 @@ int _row_offsets[4];
 
 void MyCrystal(int rs, int enable,int d4, int d5, int d6, int d7)
 {
+  clear();
   MyInit(4, rs, 255, enable, d4, d5, d6, d7);
 }
 
@@ -73,9 +73,6 @@ void begin(int cols, int lines, int dotsize) {
   if (_rw_pin != 255) { 
     digitalWrite(_rw_pin, LOW);
   }
-  
-  //put the LCD into 4 bit or 8 bit mode
-  
 
     // we start in 8bit mode, try to set 4 bit mode
     write4bits(0x03);
@@ -98,13 +95,15 @@ void begin(int cols, int lines, int dotsize) {
 
   // turn the display on with no cursor or blinking default
   _displaycontrol = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;  
-  display();
+
+    _displaycontrol |= LCD_DISPLAYON;
+  command(LCD_DISPLAYCONTROL | _displaycontrol);
 
   // clear it off
   clear();
 
-  // Initialize to default text direction (for romance languages)
-  _displaymode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
+  // // Initialize to default text direction (for romance languages)
+  // _displaymode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
   // set the entry mode
   command(LCD_ENTRYMODESET | _displaymode);
 
@@ -125,12 +124,6 @@ void clear()
   delayMicroseconds(2000);  // this command takes a long time!
 }
 
-void home()
-{
-  command(LCD_RETURNHOME);  // set cursor position to zero
-  delayMicroseconds(2000);  // this command takes a long time!
-}
-
 void setCursor(int col, int row)
 {
   const int max_lines = sizeof(_row_offsets) / sizeof(*_row_offsets);
@@ -140,36 +133,13 @@ void setCursor(int col, int row)
   if ( row >= _numlines ) {
     row = _numlines - 1;    // we count rows starting w/0
   }
-  
   command(LCD_SETDDRAMADDR | (col + _row_offsets[row]));
-}
-
-
-void display() {
-  _displaycontrol |= LCD_DISPLAYON;
-  command(LCD_DISPLAYCONTROL | _displaycontrol);
-}
-
-
-// Allows us to fill the first 8 CGRAM locations
-// with custom characters
-void createChar(int location, int charmap[]) {
-  location &= 0x7; // we only have 8 locations 0-7
-  command(LCD_SETCGRAMADDR | (location << 3));
-  for (int i=0; i<8; i++) {
-    Mywrite(charmap[i]);
-  }
 }
 
 /*********** mid level commands, for sending data/cmds */
 
  void command(int value) {
   send(value, LOW);
-}
-
- int Mywrite(int value) {
-  send(value, HIGH);
-  return 1; // assume sucess
 }
 
 /************ low level data pushing commands **********/
@@ -202,46 +172,77 @@ void write4bits(int value) {
   }
   pulseEnable();
 }
-
-size_t write2(const char *buffer, size_t size) {
-      return write((const int *)buffer, size);
-    }
-
-int write1(const char *str) {
-    if (str == NULL) return 0;
-    return write2((const char *)str, strlen(str));
-  }
-
-int write(int *buffer, int size)
-{
-  int n = 0;
-  while (size--) {
-    if (write(*buffer++, size)) n++;
-    else break;
-  }
-  Mywrite(n);
+ size_t Mywrite(int value) {
+  send(value, HIGH);
+  return value; // assume sucess
 }
 
-int MyPrintChar(char c)
+size_t MyPrintChar(char c)
 {
-  char *p=&c;
-   write1(p);
+  Mywrite(c);
 }
 
 
-size_t MyPrintInt(int n, int base)
+// This is for text that flows Left to Right
+void leftToRight(void) {
+  _displaymode |= LCD_ENTRYLEFT;
+  command(LCD_ENTRYMODESET | _displaymode);
+}
+
+// This is for text that flows Right to Left
+void rightToLeft(void) {
+  _displaymode &= ~LCD_ENTRYLEFT;
+  command(LCD_ENTRYMODESET | _displaymode);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+char m;
+int b;
+int t;
+
+int as(){
+  return b;
+}
+
+
+size_t MyPrintInt(int n)
 {
-  return print2((long) n, base);
+  return print2((long) n, DEC);
 }
 
 size_t print2(long n, int base)
 {
-  if (base == 0) {
-    return write1(n);
-  } else if (base == 10) {
+
+     if (base == 10) {
     if (n < 0) {
-      int t = print3('-');
+      int t = Mywrite('-');
       n = -n;
+      
       return printNumber(n, 10) + t;
     }
     return printNumber(n, 10);
@@ -250,35 +251,37 @@ size_t print2(long n, int base)
   }
 }
 
+
+
 size_t printNumber(unsigned long n, uint8_t base)
 {
-  char buf[8 * sizeof(long) + 1]; // Assumes 8-bit chars plus zero byte.
+  
+  char buf[4 * sizeof(long) + 1]; // Assumes 8-bit chars plus zero byte.
   char *str = &buf[sizeof(buf) - 1];
 
   *str = '\0';
-
-  // prevent crash if called with base == 1
-  if (base < 2) base = 10;
-
   do {
     char c = n % base;
     n /= base;
 
+
     *--str = c < 10 ? c + '0' : c + 'A' - 10;
   } while(n);
-
-  return write1(str);
+  return write4(str);
 }
+size_t write4(const char *str) {
+      if (str == NULL) return 0;
 
+    
+      return write5((const uint8_t *)str, strlen(str));
+    }
 
-size_t print3(const __FlashStringHelper *ifsh)
+size_t write5(const uint8_t *buffer, size_t size)
 {
-  PGM_P p = reinterpret_cast<PGM_P>(ifsh);
+ 
   size_t n = 0;
-  while (1) {
-    unsigned char c = pgm_read_byte(p++);
-    if (c == 0) break;
-    if (write1(c)) n++;
+  while (size--) {
+    if (Mywrite(*buffer++)) n++;
     else break;
   }
   return n;
