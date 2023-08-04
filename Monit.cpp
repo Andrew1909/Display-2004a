@@ -22,7 +22,6 @@ int _row_offsets[4];
 
 void MyCrystal(int rs, int enable,int d4, int d5, int d6, int d7)
 {
-  clear();
   MyInit(4, rs, 255, enable, d4, d5, d6, d7);
 }
 
@@ -38,17 +37,17 @@ void MyInit(int fourbitmode, int rs, int rw, int enable, int d4, int d5, int d6,
   _data_pins[2] = d6;
   _data_pins[3] = d7; 
   
-  _displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
-  begin(20, 4, _displayfunction);  
-}
+  _displayfunction = LCD_4BITMODE;
 
-void begin(int cols, int lines, int dotsize) {
-  if (lines > 1) {
-    _displayfunction |= LCD_2LINE;
-  }
-  _numlines = lines;
+  int cols=20;
+  _displayfunction |= LCD_2LINE;
+  _numlines = 4;
 
-  setRowOffsets(0x00, 0x40, 0x00 + cols, 0x40 + cols);  
+//set rows
+  _row_offsets[0] = 0x00;
+  _row_offsets[1] = 0x40;
+  _row_offsets[2] = 0x00 + cols;
+  _row_offsets[3] = 0x40 + cols;
 
   pinMode(_rs_pin, OUTPUT);
   // we can save 1 pin by not using RW. Indicate by passing 255 instead of pin#
@@ -102,20 +101,12 @@ void begin(int cols, int lines, int dotsize) {
   // clear it off
   clear();
   leftToRight();
-  // // Initialize to default text direction (for romance languages)
-  // _displaymode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
+
   // set the entry mode
   command(LCD_ENTRYMODESET | _displaymode);
 
 }
 
-void setRowOffsets(int row0, int row1, int row2, int row3)
-{
-  _row_offsets[0] = row0;
-  _row_offsets[1] = row1;
-  _row_offsets[2] = row2;
-  _row_offsets[3] = row3;
-}
 
 /********** high level commands, for the user! */
 void clear()
@@ -172,14 +163,16 @@ void write4bits(int value) {
   }
   pulseEnable();
 }
- size_t Mywrite(int value) {
+
+
+ size_t write(int value) {
   send(value, HIGH);
   return value; // assume sucess
 }
 
-size_t MyPrintChar(char c)
+size_t PrintChar(char c)
 {
-  Mywrite(c);
+  write(c);
 }
 
 
@@ -195,17 +188,17 @@ void rightToLeft(void) {
   command(LCD_ENTRYMODESET | _displaymode);
 }
 
-size_t MyPrintInt(int n)
+size_t PrintInt(int n)
 {
-  return print2((long) n, DEC);
+  return checkMinus((long) n, DEC);
 }
 
-size_t print2(long n, int base)
+size_t checkMinus(long n, int base)//проверка на отрицательное число
 {
 
      if (base == 10) {
     if (n < 0) {
-      int t = Mywrite('-');
+      int t = write('-');
       n = -n;
       
       return printNumber(n, 10) + t;
@@ -216,6 +209,17 @@ size_t print2(long n, int base)
   }
 }
 
+size_t writePrint(const char *str) {
+  if (str == NULL) return 0;  //проверка на пустой указатель
+  else{
+    const uint8_t *buffer=(const uint8_t *)str;//берёт указатель, размер. Отправляет на печать по символьно пока размер не = 0
+        size_t size=strlen(str);
+        while (size--) {
+          if (write(*buffer++));
+          else break;
+        }
+      }
+}
 
 
 size_t printNumber(unsigned long n, uint8_t base)
@@ -223,64 +227,29 @@ size_t printNumber(unsigned long n, uint8_t base)
   
   char buf[4 * sizeof(long) + 1]; // Assumes 8-bit chars plus zero byte.
   char *str = &buf[sizeof(buf) - 1];
-
   *str = '\0';
   do {
     char c = n % base;
     n /= base;
-
-
     *--str = c < 10 ? c + '0' : c + 'A' - 10;
   } while(n);
-  return write4(str);
+  return writePrint(str);
 }
-size_t write4(const char *str) {
-      if (str == NULL) return 0;
 
-    
-      return write5((const uint8_t *)str, strlen(str));
-    }
-
-size_t write5(const uint8_t *buffer, size_t size)
+size_t PrintDouble(double number )
 {
- 
-  size_t n = 0;
-  while (size--) {
-    if (Mywrite(*buffer++)) n++;
-    else break;
-  }
-  return n;
-}
-
-
-
-
-char m;
-int b;
-int t;
-
-int as(){
-  return b;
-}
-
-size_t MyPrintDouble(double n)
-{
-  return printFloat(n, 3);//3 это колиество знаков после запятой
-}
-
-size_t printFloat(double number, uint8_t digits)
-{ 
+  uint8_t digits= 3;//3 это колиество знаков после запятой
   size_t n = 0;
   
-  if (isnan(number)) return write4("nan");
-  if (isinf(number)) return write4("inf");
-  if (number > 4294967040.0) return write4 ("ovf");  // constant determined empirically
-  if (number <-4294967040.0) return write4 ("ovf");  // constant determined empirically
+  if (isnan(number)) return writePrint("nan");
+  if (isinf(number)) return writePrint("inf");
+  if (number > 4294967040.0) return writePrint ("ovf");  // constant determined empirically
+  if (number <-4294967040.0) return writePrint ("ovf");  // constant determined empirically
   
   // Handle negative numbers
   if (number < 0.0)
   {
-     n += Mywrite('-');
+     n += write('-');
      number = -number;
   }
 
@@ -294,11 +263,11 @@ size_t printFloat(double number, uint8_t digits)
   // Extract the integer part of the number and print it
   unsigned long int_part = (unsigned long)number;
   double remainder = number - (double)int_part;
-  n += print2(int_part,10);
+  n += checkMinus(int_part,10);
 
   // Print the decimal point, but only if there are digits beyond
   if (digits > 0) {
-    n += Mywrite('.'); 
+    n += write('.'); 
   }
 
   // Extract digits from the remainder one at a time
@@ -306,9 +275,13 @@ size_t printFloat(double number, uint8_t digits)
   {
     remainder *= 10.0;
     unsigned int toPrint = (unsigned int)(remainder);
-    n += print2(toPrint,10);
+    n += checkMinus(toPrint,10);
     remainder -= toPrint; 
   } 
-  
   return n;
+}
+
+size_t PrintStr(const char str[])
+{
+   writePrint(str);
 }
